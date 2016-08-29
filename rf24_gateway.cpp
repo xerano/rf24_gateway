@@ -38,7 +38,7 @@ int main(int argc, char** argv){
     mosquitto_publish_callback_set(mosq, on_publish);
 
     // forever loop
-	while (1)
+    while (1)
 	{
         // if there is data ready
         if ( radio.available() )
