@@ -21,51 +21,51 @@ void on_publish(struct mosquitto *mosq, void *userdata, int mid)
 
 int main(int argc, char** argv){     
 
-  // Setup and configure rf radio
-  radio.begin();
-  // optionally, increase the delay between retries & # of retries
-  radio.setRetries(15,15);
-  // Dump the configuration of the rf unit for debugging
-  radio.printDetails();
-  radio.openWritingPipe(pipes[0]);
-  radio.openReadingPipe(1,pipes[1]);
+    // Setup and configure rf radio
+    radio.begin();
+    // optionally, increase the delay between retries & # of retries
+    radio.setRetries(15,15);
+    // Dump the configuration of the rf unit for debugging
+    radio.printDetails();
+    radio.openWritingPipe(pipes[0]);
+    radio.openReadingPipe(1,pipes[1]);
       
-  radio.startListening();
-	
-  struct mosquitto *mosq;
+    radio.startListening();
 
-  mosq = mosquitto_new("id", true, NULL);
-  mosquitto_publish_callback_set(mosq, on_publish);
+    struct mosquitto *mosq;
 
-  // forever loop
+    mosq = mosquitto_new("id", true, NULL);
+    mosquitto_publish_callback_set(mosq, on_publish);
+
+    // forever loop
 	while (1)
 	{
-			// if there is data ready
-    if ( radio.available() )
-    {
-        // Dump the payloads until we've gotten everything
-        float temp;
+        // if there is data ready
+        if ( radio.available() )
+        {
+            // Dump the payloads until we've gotten everything
+            float temp;
 
-        // Fetch the payload, and see if this was the last one.
-        while(radio.available()){
-          radio.read( &temp, sizeof(float) );
+            // Fetch the payload, and see if this was the last one.
+            while(radio.available()){
+              radio.read( &temp, sizeof(float) );
+            }
+            
+            
+            json_object * jobj = json_object_new_object();
+            json_object *jdouble = json_object_new_double(temp);
+            json_object_object_add(jobj,"temp", jdouble);
+            
+            mosquitto_connect(mosq, "localhost", 1883, 0);
+            printf("Now sending %f\n", temp);
+            const char *jsonString = json_object_to_json_string(jobj);
+            mosquitto_publish(mosq, NULL, "sensors/temp/0", strlen(jsonString), jsonString, 0, false);
+            delay(925); //Delay after payload responded to, minimize RPi CPU time
+            
         }
-        
-        
-        json_object * jobj = json_object_new_object();
-        json_object *jdouble = json_object_new_double(temp);
-        json_object_object_add(jobj,"temp", jdouble);
-        
-        mosquitto_connect(mosq, "localhost", 1883, 0);
-        printf("Now sending %f\n", temp);
-        const char *jsonString = json_object_to_json_string(jobj);
-        mosquitto_publish(mosq, NULL, "sensors/temp/0", strlen(jsonString), jsonString, 0, false);
-        delay(925); //Delay after payload responded to, minimize RPi CPU time
-        
-    }
-		
-	} // forever loop
+            
+    } // forever loop
 
-  return 0;
+    return 0;
 }
 
