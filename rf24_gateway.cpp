@@ -7,6 +7,8 @@
 #include <mosquitto.h>
 #include <json.h>
 
+#define LED_PIN RPI_GPIO_P1_11
+
 using namespace std;
 RF24 radio(22,0);
 /********************************/
@@ -32,6 +34,9 @@ int main(int argc, char** argv){
       
     radio.startListening();
 
+    // init LED
+    bcm2835_gpio_fsel(LED_PIN, BCM2835_GPIO_FSEL_OUTP);
+
     struct mosquitto *mosq;
 
     mosq = mosquitto_new("id", true, NULL);
@@ -41,8 +46,12 @@ int main(int argc, char** argv){
     while (1)
 	{
         // if there is data ready
+	
+	bcm2835_gpio_write(LED_PIN, LOW);
+
         if ( radio.available() )
         {
+	    bcm2835_gpio_write(LED_PIN, HIGH);
             // Dump the payloads until we've gotten everything
             float temp;
 
@@ -60,9 +69,8 @@ int main(int argc, char** argv){
             printf("Now sending %f\n", temp);
             const char *jsonString = json_object_to_json_string(jobj);
             mosquitto_publish(mosq, NULL, "sensors/temp/0", strlen(jsonString), jsonString, 0, false);
-            delay(925); //Delay after payload responded to, minimize RPi CPU time
-            
         }
+        delay(100); //Delay after payload responded to, minimize RPi CPU time
             
     } // forever loop
 
