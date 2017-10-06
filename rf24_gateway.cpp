@@ -22,7 +22,7 @@
 
 using namespace std;
 
-typedef struct TinyTemp {
+struct TinyTemp {
     float temp;
     int vcc;
 };
@@ -38,6 +38,7 @@ void eventLoop();
 const uint8_t pipes[][6] = {"1Node","2Node", "3Node"};
 
 void init_mosquitto(){
+	fprintf(stderr, "Initializing mosquitto...");
     mosq = mosquitto_new("id", true, NULL);
  	mosquitto_connect(mosq, "localhost", 1883, 0);
 	int loop = mosquitto_loop_start(mosq);
@@ -45,6 +46,7 @@ void init_mosquitto(){
         fprintf(stderr, "Unable to start loop: %i\n", loop);
         exit(1);
     }
+    fprintf(stderr, "done\n");
 }
 
 volatile char should_disconnect = 0;
@@ -77,6 +79,14 @@ void sighandler(int signum){
     exit(0);
 }
 
+int initLED(){
+	fprintf(stderr, "Initializing status LED...\n");
+	if (!bcm2835_init()){
+		return 1;
+	}
+	bcm2835_gpio_fsel(LED_PIN, BCM2835_GPIO_FSEL_OUTP);
+}
+
 int main(int argc, char** argv){
 	
     if(SIG_ERR == signal(SIGTERM, sighandler)){
@@ -91,13 +101,10 @@ int main(int argc, char** argv){
 	fprintf(stderr, "Setup radio...\n");
     setup_radio();
 
-    // init LED
-    //printf("Initializing status LED...\n");
-    //bcm2835_gpio_fsel(LED_PIN, BCM2835_GPIO_FSEL_OUTP);
+    initLED();   
     
-    fprintf(stderr, "Initializing mosquittoi...");
     init_mosquitto();
-    fprintf(stderr, "done\n");
+    
 	
     eventLoop();
 }
@@ -107,6 +114,8 @@ void eventLoop(){
     char topic_vcc[50];
     char temp_val[10];
     char vcc_val[10];
+    
+    fprintf(stderr, "Entering main loop...\n");
 	while (1)
 	{
 		// if there is data ready
