@@ -6,7 +6,6 @@ LIB=rf24
 
 CFLAGS=-g
 CFLAGS += $(shell pkg-config --cflags json-c)
-CFLAGS += $(shell mysql_config --cflags)
 LDFLAGS += -lmosquitto
 LDFLAGS += -lpthread
 LDFLAGS += $(shell pkg-config --libs json-c)

@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <bcm2835.h>
 #include <signal.h>
+#include <pthread.h>
 
 #define LED_PIN RPI_GPIO_P1_11
 #define PIPES 3
@@ -87,6 +88,16 @@ int initLED(){
 	bcm2835_gpio_fsel(LED_PIN, BCM2835_GPIO_FSEL_OUTP);
 }
 
+void *blink(void *data){
+	int i;
+	for(i=0; i < 5; i++){
+		bcm2835_gpio_set(LED_PIN);
+		delay(500);
+		bcm2835_gpio_clr(LED_PIN);
+		delay(500);
+	}
+}
+
 int main(int argc, char** argv){
 	
     if(SIG_ERR == signal(SIGTERM, sighandler)){
@@ -114,6 +125,7 @@ void eventLoop(){
     char topic_vcc[50];
     char temp_val[10];
     char vcc_val[10];
+    pthread_t blink_thread;
     
     fprintf(stderr, "Entering main loop...\n");
 	while (1)
@@ -132,6 +144,8 @@ void eventLoop(){
 				radio.read( &tinyTemp, sizeof(tinyTemp) );
 			}
 			
+			pthread_create(&blink_thread, NULL, &blink, NULL);
+			
 			fprintf(stderr, "received(%d)  temp: %f vcc: %d \n", pipe, tinyTemp.temp, tinyTemp.vcc);
             sprintf(topic_temp, "emon/%d/temp", pipe);
             sprintf(topic_vcc, "emon/%d/vcc", pipe);
@@ -145,7 +159,7 @@ void eventLoop(){
 			if(pipe>PIPES){
 				pipe=1;
 			}
-		}
-	  delay(100); //Delay after payload responded to, minimize RPi CPU time
+		}		
+		delay(100); //Delay after payload responded to, minimize RPi CPU time
 	} // forever loop
 }
